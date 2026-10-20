@@ -21,7 +21,7 @@ const $=s=>document.querySelector(s),L=(k,d)=>{try{return JSON.parse(localStorag
 let st=L('ced',{set:{name:'CED-Multiservice',logo:'',rate:130,cid:'',sid:''},items:{},sales:{},moves:{},users:{}}),q=L('ced_q',[]),me=L('ced_me',{email:'local',name:''}),tok=null,tab='sale',cart=[],eid=null;
 const API='https://sheets.googleapis.com/v4/spreadsheets/',save=()=>{Sv('ced',st);Sv('ced_q',q)},uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),R=n=>Math.round(n).toLocaleString('fr-FR'),cv=(v,c)=>c==='USD'?v*st.set.rate:v;
-const adm=()=>me.email==='local'||st.users[me.email]?.role==='admin',tr=x=>x.type!=='service';
+const adm=()=>me.email==='local'||!Object.keys(st.users).length||st.users[me.email]?.role==='admin',tr=x=>x.type!=='service';
 const stock=i=>{let n=+st.items[i].init||0;for(const m of Object.values(st.moves))if(m.i===i)n+=m.q;for(const s of Object.values(st.sales))for(const l of s.lines)if(l.i===i)n-=l.q;return n};
 function apply(e){if(e.t==='settings')st.set={...st.set,...e.data};else if(st[e.t+'s'])st[e.t+'s'][e.id]=e.data}
 function up(t,id,data){const e={t,id,data,ts:Date.now(),by:me.email};apply(e);q.push(e);save();sync();render()}
