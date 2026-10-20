@@ -1,2 +1,2 @@
-self.addEventListener('install',e=>e.waitUntil(caches.open('ced1').then(c=>c.addAll(['./','index.html','manifest.json']))));
+self.addEventListener('install',e=>e.waitUntil(caches.open('ced1').then(c=>c.addAll(['./','index.html','manifest.json','icon-192.png']))));
 self.addEventListener('fetch',e=>{if(e.request.method==='GET'&&new URL(e.request.url).origin===location.origin)e.respondWith(fetch(e.request).then(r=>{const k=r.clone();caches.open('ced1').then(c=>c.put(e.request,k));return r}).catch(()=>caches.match(e.request)))});
