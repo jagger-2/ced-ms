@@ -62,7 +62,7 @@ const cv=(v,c)=>c==='USD'?v*st.set.rate:v,cvr=(v,c,r)=>c==='USD'?v*r:v,DI=()=>st
 const adm=()=>me.role==='admin',ok=()=>adm()||me.role==='vendeur',tr=x=>x.type!=='service',pend=()=>usrs.filter(u=>u.role==='pending').length;
 const opts=f=>Object.entries(st.items).filter(([i,x])=>(x.n+' '+(x.cat||'')).toLowerCase().includes(f)).map(([i,x])=>`<option value=${i}>${esc(x.n)}${x.cat?' · '+esc(x.cat):''}</option>`).join('');
 const stock=i=>{let n=+st.items[i].init||0;for(const m of Object.values(st.moves))if(m.i===i)n+=m.q;for(const s of Object.values(st.sales))for(const l of s.lines)if(l.i===i)n-=l.q;return n};
-function apply(e){if(e.t==='settings')st.set={...st.set,...e.data};else if(['item','sale','move'].includes(e.t))st[e.t+'s'][e.id]=e.data}
+function apply(e){if(e.t==='settings')st.set={...st.set,...e.data};else if(['item','sale','move'].includes(e.t)){if(e.data&&e.data.del)delete st[e.t+'s'][e.id];else st[e.t+'s'][e.id]=e.data}}
 function up(t,id,data){const e={t,id,data,ts:Date.now(),by:me.email};apply(e);q.push(e);save();sync();render()}
 /* ---------- Service sécurisé (Apps Script) ---------- */
 async function rpc(a,b={}){const r=await fetch(st.set.api,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a,token:tok,...b})});if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
@@ -130,8 +130,9 @@ ${pe.length?`<div class="card"><h3>Demandes d’accès (${pe.length})</h3>${pe.m
 ${me.owner?`<div class="card"><h3>Connexion technique (administrateur principal)</h3><span class="s">Ne communiquez jamais ces informations : utilisez le lien d’invitation.</span><input id="cid" placeholder="ID client Google" value="${esc(st.set.cid)}"><input id="api" placeholder="Adresse du service (…/exec)" value="${esc(st.set.api)}"><button class="b g" onclick="saveTech()">Enregistrer</button><button class="b o" onclick="invite()">Envoyer le lien d’invitation</button></div>`:''}`}};
 function fsel(){$('#si').innerHTML=opts($('#ssq').value.toLowerCase());pick()}
 function flt(){fq=$('#qs').value.toLowerCase();fg=$('#qc').value;$('#lst').innerHTML=lst()}
-function lst(){const r=Object.entries(st.items).filter(([i,x])=>(!fg||x.cat===fg)&&(x.n+' '+(x.cat||'')).toLowerCase().includes(fq));return r.map(([i,x])=>{const n=tr(x)?stock(i):null,p=pr(x),k=x.k||0,net=p-k-p*OH()/100;return `<div class="card"><div class="r"><b style="font-size:17px">${esc(x.n)}</b><b class="n" style="font-size:19px">${fx(p,x.cur)} ${DI()}${x.auto?' · auto':''}</b></div><div class="s">${esc(x.cat||'Sans catégorie')}${adm()&&k>0?' · marge nette '+fx(net,x.cur)+' '+DI()+' ('+(p?(net/p*100).toFixed(0):0)+' %)':''}</div><div class="r"><span class="${tr(x)&&n<=x.min?'low':'s'}">${tr(x)?'Stock : '+n+(n<=x.min?' (bas)':''):'Sans suivi de stock'}</span><span>${tr(x)?`<a onclick="restock('${i}')">+ Réappro</a> `:''}${adm()?`<a onclick="edit('${i}')">Modifier</a>`:''}</span></div></div>`}).join('')||'<p class="s">Aucun article.</p>'}
+function lst(){const r=Object.entries(st.items).filter(([i,x])=>(!fg||x.cat===fg)&&(x.n+' '+(x.cat||'')).toLowerCase().includes(fq));return r.map(([i,x])=>{const n=tr(x)?stock(i):null,p=pr(x),k=x.k||0,net=p-k-p*OH()/100;return `<div class="card"><div class="r"><b style="font-size:17px">${esc(x.n)}</b><b class="n" style="font-size:19px">${fx(p,x.cur)} ${DI()}${x.auto?' · auto':''}</b></div><div class="s">${esc(x.cat||'Sans catégorie')}${adm()&&k>0?' · marge nette '+fx(net,x.cur)+' '+DI()+' ('+(p?(net/p*100).toFixed(0):0)+' %)':''}</div><div class="r"><span class="${tr(x)&&n<=x.min?'low':'s'}">${tr(x)?'Stock : '+n+(n<=x.min?' (bas)':''):'Sans suivi de stock'}</span><span>${tr(x)?`<a onclick="restock('${i}')">+ Réappro</a> `:''}${adm()?`<a style="margin-left:14px" onclick="edit('${i}')">Modifier</a><a style="margin-left:14px;color:var(--m)" onclick="delItem('${i}')">Supprimer</a>`:''}</span></div></div>`}).join('')||'<p class="s">Aucun article.</p>'}
 function simu(){const m=+$('#cm').value||0,o=+$('#co').value||0,p=cp(100,m,$('#cmo').value),n=p-100-p*o/100;$('#sim').textContent='Pour un coût de 100 : prix '+R(p)+' · marge brute '+R(p-100)+' · marge nette '+R(n)}
+function delItem(i){const x=st.items[i];if(!x||!adm())return;if(!confirm('Supprimer « '+x.n+' » du stock ?\nLes ventes déjà enregistrées gardent leur historique.'))return;if(eid===i)eid=null;up('item',i,{del:1})}
 function togD(){st.set.disp=DI()==='USD'?'HTG':'USD';save();render()}
 function saveCo(){st.set.disp=$('#cdp').value;const nr=+$('#cr').value||1;up('settings','s',{name:$('#cn').value,rate:nr,rd:nr!==st.set.rate?Date.now():st.set.rd,m:+$('#cm').value||0,oh:+$('#co').value||0,mode:$('#cmo').value})}
 function lm(){const k=+$('#fk').value||0,a=$('#fa').checked,p=a&&k>0?cp(k):+$('#fp').value||0,g=p-k;$('#lmg').textContent=p?`Prix ${R(p)} · marge brute ${R(g)} (${(g/p*100).toFixed(1)} % du prix${k?', '+(g/k*100).toFixed(1)+' % du coût':''}) · nette ${R(g-p*OH()/100)}`:''}
@@ -158,19 +159,20 @@ function fieldOf(c){const z=nz(c);if(!z)return null;for(const[f,l]of Object.entr
 if(/^(cout|prixdachat|prixachat|prixderevient|prixrevient)/.test(z))return'k';if(/^(prix|tarif|pv)/.test(z))return'p';if(/^(seuil|stockmin)/.test(z))return'min';if(/^(stock|quantite|qte)/.test(z))return'init';if(/^(dimension|taille|format|variante|modele|version)/.test(z))return'var';return null}
 const NUM=v=>{let s=String(v??'').replace(/[^\d,.\-]/g,'');if(s.includes(',')&&!s.includes('.'))s=s.replace(',','.');else s=s.replace(/,/g,'');return +s||0};
 const isNA=v=>['','nonapplicable','na','nd','aucun','sans'].includes(nz(v)),isTxt=v=>{const s=String(v??'').trim();return s!==''&&!/\d/.test(s)};
+const nm=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[\s\-_]+/g,' ').trim();
 function parseTab(A){A=A.filter(r=>r.some(c=>String(c).trim()!==''));if(!A.length)return null;let cols=null,hi=-1,defCur;
 for(let i=0;i<Math.min(A.length,10)&&!cols;i++){const m={};A[i].forEach((c,j)=>{const f=fieldOf(c);if(f&&!(f in m))m[f]=j});if(m.n!==undefined&&Object.keys(m).length>=2){cols=m;hi=i;if(m.p!==undefined){const z=nz(A[i][m.p]);defCur=z.includes('usd')?'USD':/htg|gdes|gourde/.test(z)?'HTG':undefined}}}
 if(!cols){cols={n:0,cat:1,type:2,p:3,k:4,cur:5,init:6,min:7};hi=/[a-z]/i.test(String(A[0][3]??''))?0:-1}
-const g=(r,f)=>r[cols[f]],by=new Map(Object.entries(st.items).map(([i,x])=>[x.n.toLowerCase(),i])),seen=new Map();let skip=0,tot=0;
+const g=(r,f)=>r[cols[f]],by=new Map(Object.entries(st.items).map(([i,x])=>[nm(x.n),i])),seen=new Map();let skip=0,tot=0;
 for(const r of A.slice(hi+1)){let n=String(r[cols.n]??'').trim();if(!n){skip++;continue}
-if('var' in cols){const v=String(g(r,'var')??'').trim();if(v&&!isNA(v))n+=' '+v}tot++;const o={n,id:by.get(n.toLowerCase())||null};
+if('var' in cols){const v=String(g(r,'var')??'').trim();if(v&&!isNA(v))n+=' '+v}tot++;const o={n,id:by.get(nm(n))||null};
 if('cat' in cols)o.cat=String(g(r,'cat')??'').trim();
 if('type' in cols){const T=nz(g(r,'type'));o.type=T.startsWith('serv')?'service':T.startsWith('mat')?'matiere':'produit'}
-if('p' in cols)o.p=NUM(g(r,'p'));if('k' in cols)o.k=NUM(g(r,'k'));
+if('p' in cols&&String(g(r,'p')??'').trim()!=='')o.p=NUM(g(r,'p'));if('k' in cols&&String(g(r,'k')??'').trim()!=='')o.k=NUM(g(r,'k'));
 if('cur' in cols){const c=nz(g(r,'cur'));o.cur=c==='usd'||c.startsWith('dollar')||String(g(r,'cur')).includes('$')?'USD':'HTG'}else if(defCur)o.cur=defCur;
-if('init' in cols){const v=g(r,'init');if(isTxt(v)){o.nt=1;if(!('type' in cols)&&!o.id)o.type='service'}else if(String(v??'').trim()!=='')o.st=NUM(v)}
+if('init' in cols){const v=g(r,'init');if(isTxt(v)){o.nt=1;if(!('type' in cols))o.type='service'}else if(String(v??'').trim()!=='')o.st=NUM(v)}
 if('min' in cols&&String(g(r,'min')??'').trim()!=='')o.min=NUM(g(r,'min'));
-seen.set(n.toLowerCase(),o)}
+seen.set(nm(n),o)}
 return{rows:[...seen.values()],skip,dup:tot-seen.size,cols:Object.keys(cols).map(k=>LBL[k]).join(', ')}}
 function imp(f){const file=f.files[0];if(!file)return;const csvf=/\.(csv|txt)$/i.test(file.name),r=new FileReader();
 r.onload=()=>{try{let A;if(csvf){const t=String(r.result).replace(/^\ufeff/,''),l0=t.split('\n')[0],sp=(l0.match(/;/g)||[]).length>=(l0.match(/,/g)||[]).length&&l0.includes(';')?';':',';A=t.split(/\r?\n/).map(l=>l.split(sp).map(c=>c.trim().replace(/^"|"$/g,'')))}
